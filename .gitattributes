@@ -1,0 +1,2 @@
+# Kernel sources are built from Linux/WSL; keep LF everywhere.
+* text=auto eol=lf
