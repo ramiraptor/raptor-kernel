@@ -20,6 +20,11 @@ void      pmm_free_frame(uint32_t addr);
 uint32_t  pmm_total_kib(void);
 uint32_t  pmm_used_kib(void);
 
+/* ---- paging (identity map with 4 MiB pages) ---- */
+
+void      paging_init(void);
+uint32_t  paging_mapped_mib(void);
+
 /* ---- kernel heap (first-fit free list with coalescing) ---- */
 
 void      kheap_init(void);

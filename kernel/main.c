@@ -73,6 +73,14 @@ void kmain(uint32_t magic, multiboot_info_t *mbi)
     kprintf(" ] Physical memory: %u MiB detected\n",
             pmm_total_kib() / 1024);
 
+    paging_init();
+    kprintf("[ ");
+    console_set_color(VGA_LIGHT_GREEN, VGA_BLACK);
+    console_write("OK");
+    console_set_color(VGA_LIGHT_GREY, VGA_BLACK);
+    kprintf(" ] Paging enabled (%u MiB identity-mapped, 4 MiB pages)\n",
+            paging_mapped_mib());
+
     ramfs_init();
     step("ramfs mounted at /");
 

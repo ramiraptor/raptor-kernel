@@ -7,9 +7,10 @@ appears, and how the subsystems relate to each other.
 ## Big picture
 
 Raptor is a **monolithic kernel** for 32-bit x86 (i386), using the flat
-memory model: all segments span the full 4 GiB address space and there is
-no paging yet. Everything — drivers, filesystem, shell — runs in ring 0 in
-a single address space with interrupts as the only source of concurrency.
+memory model: all segments span the full 4 GiB address space, and paging
+identity-maps detected RAM so virtual and physical addresses coincide.
+Everything — drivers, filesystem, shell — runs in ring 0 in a single
+address space with interrupts as the only source of concurrency.
 
 That is exactly where Linux 0.01 started, and for the same reason: it is
 the simplest design that produces a *usable* system, and every later
@@ -29,6 +30,7 @@ bootloader (GRUB / QEMU -kernel)
             keyboard_init()     PS/2 handler on IRQ1
             kheap_init()        4 MiB heap right after the kernel image
             pmm_init()          frame bitmap built from the Multiboot memory info
+            paging_init()       all RAM identity-mapped with 4 MiB pages, CR0.PG set
             ramfs_init()        root filesystem populated on the heap
             shell_run()         REPL; never returns
 ```
@@ -58,8 +60,24 @@ above that                free physical frames, tracked by the PMM bitmap
 `kernel_end` is exported by the linker script, page-aligned. The physical
 memory manager marks everything below the end of the heap as used at boot
 and hands out 4 KiB frames above it; today its only consumer is the `free`
-command's statistics, but it is the foundation paging will allocate page
-tables from.
+command's statistics, but it is the foundation finer-grained paging will
+allocate page tables from.
+
+## Paging
+
+`mm/paging.c` builds a single page directory of 4 MiB "large" pages
+(PSE — Page Size Extension) that identity-maps every byte of detected
+RAM, then sets `CR4.PSE`, loads `CR3` and flips `CR0.PG`. Virtual
+addresses still equal physical addresses, so no other code changed when
+the MMU came on — but accesses beyond RAM now fault deterministically
+instead of floating on the bus, and the page-fault handler reports the
+faulting address from `CR2` along with the decoded error code
+(read/write, kernel/user, not-present/protection) before panicking.
+
+The 4 MiB granularity keeps the entire mapping in one 4 KiB page
+directory with no page tables to manage. Breaking the first entry into
+4 KiB pages (to unmap the NULL page) and moving the kernel to the higher
+half are the next steps on the roadmap.
 
 ## Interrupts
 

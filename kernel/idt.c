@@ -12,6 +12,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <raptor/console.h>
 #include <raptor/interrupts.h>
 #include <raptor/io.h>
 #include <raptor/panic.h>
@@ -132,6 +133,19 @@ void isr_handler(struct registers *regs)
 {
     const char *name = regs->int_no < 32 ?
             exception_names[regs->int_no] : "Unknown";
+
+    if (regs->int_no == 14) {
+        /* The faulting address is in CR2; the error code says why. */
+        uint32_t cr2;
+
+        __asm__ volatile("mov %%cr2, %0" : "=r"(cr2));
+        kprintf("\nPage fault: %s access to %08x from %s mode (%s)\n",
+                (regs->err_code & 2) ? "write" : "read",
+                cr2,
+                (regs->err_code & 4) ? "user" : "kernel",
+                (regs->err_code & 1) ? "protection violation"
+                                     : "page not present");
+    }
 
     panic_with_regs(name, regs);
 }

@@ -6,12 +6,14 @@ ordered — every item builds on the ones before it.
 
 ## 0.2 — Virtual memory
 
-- Enable paging with identity-mapped kernel space; the PMM (already in
-  place) becomes the page-frame supplier.
-- Higher-half kernel at `0xC0000000`, freeing low virtual addresses for
-  the future userspace.
-- Page-fault handler that distinguishes kernel bugs (panic) from
-  legitimate demand faults.
+- [x] Enable paging with identity-mapped kernel space (4 MiB PSE pages,
+  `mm/paging.c`).
+- [x] Page-fault handler that reports the faulting address (CR2) and
+  decoded error code.
+- [ ] Higher-half kernel at `0xC0000000`, freeing low virtual addresses
+  for the future userspace.
+- [ ] Unmap the NULL page by splitting the first directory entry into
+  4 KiB pages.
 
 ## 0.3 — Tasks and scheduling
 
