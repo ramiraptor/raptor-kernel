@@ -275,7 +275,7 @@ void ramfs_init(void)
         "VERSION=\"" RAPTOR_VERSION " (" RAPTOR_CODENAME ")\"\n"
         "ID=raptor\n"
         "PRETTY_NAME=\"" RAPTOR_NAME " " RAPTOR_VERSION "\"\n"
-        "HOME_URL=\"https://github.com/raptor-kernel\"\n");
+        "HOME_URL=\"https://github.com/ramiraptor/raptor-kernel\"\n");
 
     preload_file("/README.txt",
         RAPTOR_NAME " is a small Unix-like teaching kernel.\n"
