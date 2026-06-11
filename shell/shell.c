@@ -68,12 +68,24 @@ static void print_prompt(void)
     console_write("# ");
 }
 
+/* Erase the current line on screen and show `text` in its place. */
+static size_t replace_line(char *buf, size_t cap, size_t len,
+                           const char *text)
+{
+    while (len--)
+        console_write("\b \b");
+    strlcpy(buf, text, cap);
+    console_write(buf);
+    return strlen(buf);
+}
+
 static void read_line(char *buf, size_t cap)
 {
     size_t len = 0;
+    int browse = shell_history_count();  /* one past the newest entry */
 
     for (;;) {
-        char c = console_getchar();
+        int c = console_getchar();
 
         if (c == '\n') {
             console_putc('\n');
@@ -87,13 +99,29 @@ static void read_line(char *buf, size_t cap)
             }
             continue;
         }
+        if (c == KEY_UP) {
+            if (browse > 0) {
+                browse--;
+                len = replace_line(buf, cap, len, shell_history(browse));
+            }
+            continue;
+        }
+        if (c == KEY_DOWN) {
+            if (browse < shell_history_count()) {
+                browse++;
+                len = replace_line(buf, cap, len,
+                        browse == shell_history_count() ?
+                        "" : shell_history(browse));
+            }
+            continue;
+        }
         if (c == '\t')
             c = ' ';
-        if ((unsigned char)c < 0x20)
+        if (c < 0x20 || c > 0x7e)
             continue;                   /* ignore other control chars */
         if (len + 1 < cap) {
-            buf[len++] = c;
-            console_putc(c);
+            buf[len++] = (char)c;
+            console_putc((char)c);
         }
     }
 }

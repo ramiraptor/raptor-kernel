@@ -6,7 +6,7 @@
 #define RAPTOR_VERSION_H
 
 #define RAPTOR_NAME       "Raptor"
-#define RAPTOR_VERSION    "0.1.0"
+#define RAPTOR_VERSION    "0.2.0"
 #define RAPTOR_CODENAME   "Velociraptor"
 #define RAPTOR_ARCH       "i386"
 #define RAPTOR_BUILD      __DATE__ " " __TIME__

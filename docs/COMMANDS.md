@@ -7,8 +7,9 @@ and repeats. Two shell-level features apply to *every* command:
 - **Redirection** — append `> file` to send a command's output to a file
   in the ramfs (created if needed, truncated if not), or `>> file` to
   append. The redirection operator must be surrounded by spaces.
-- **History** — the last 16 non-empty lines are kept and shown by
-  `history`.
+- **History** — the last 16 non-empty lines are kept; browse them with
+  the **Up/Down arrow keys** (works on both the keyboard and a serial
+  terminal) or list them with `history`.
 
 Paths may be absolute (`/etc/motd`) or relative to the working directory;
 `.` and `..` work as usual.
@@ -39,6 +40,14 @@ Paths may be absolute (`/etc/motd`) or relative to the working directory;
 | `mv <src> <dst>` | move or rename a file or directory |
 | `hexdump <file>` | hex + ASCII dump, 16 bytes per line |
 
+## Text tools
+
+| Command | Description |
+|---|---|
+| `grep <pattern> <file>` | print lines containing the (literal) pattern |
+| `wc <file>...` | line, word and byte counts |
+| `head [-n N] <file>` | first N lines (default 10) |
+
 Examples:
 
 ```
@@ -61,6 +70,8 @@ root@raptor:/# hexdump /etc/myapp.conf
 | `uptime` | time since boot, plus the raw tick count |
 | `date` | current date and time from the CMOS real-time clock (UTC) |
 | `whoami` | always `root` — there is nobody else in ring 0 |
+| `lscpu` | CPU vendor, brand string, family/model and feature flags via CPUID |
+| `lspci` | devices on PCI bus 0: address, vendor:device IDs, class |
 
 ## Power and timing
 

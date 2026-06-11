@@ -32,8 +32,16 @@ void    console_write(const char *s);
 void    console_set_color(enum vga_color fg, enum vga_color bg);
 uint8_t console_get_color(void);
 
-/* Blocking read of one character (keyboard or serial). */
-char    console_getchar(void);
+/*
+ * Out-of-band key codes, above the ASCII range. The keyboard driver
+ * produces them from extended scancodes; the console produces them
+ * from ANSI escape sequences arriving on the serial line.
+ */
+#define KEY_UP   0x80
+#define KEY_DOWN 0x81
+
+/* Blocking read of one input byte or KEY_* code (keyboard or serial). */
+int     console_getchar(void);
 
 /* Redirect subsequent output into buf; returns bytes captured on end. */
 void    console_capture_begin(char *buf, size_t cap);

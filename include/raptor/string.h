@@ -22,5 +22,6 @@ char  *strcpy(char *dst, const char *src);
 size_t strlcpy(char *dst, const char *src, size_t size);
 char  *strcat(char *dst, const char *src);
 char  *strchr(const char *s, int c);
+char  *strstr(const char *haystack, const char *needle);
 
 #endif /* RAPTOR_STRING_H */

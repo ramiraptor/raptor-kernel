@@ -11,6 +11,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <raptor/console.h>
 #include <raptor/interrupts.h>
 #include <raptor/io.h>
 #include <raptor/keyboard.h>
@@ -24,6 +25,7 @@ static unsigned tail;
 
 static bool shift;
 static bool caps;
+static bool saw_e0;
 
 static const char map_lower[128] = {
     0,   27,  '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', '\b',
@@ -56,8 +58,19 @@ static void keyboard_irq(struct registers *regs)
     (void)regs;
     uint8_t sc = inb(KBD_DATA_PORT);
 
-    if (sc == 0xE0)                /* extended prefix: skip next byte too */
+    if (sc == 0xE0) {              /* extended scancode follows */
+        saw_e0 = true;
         return;
+    }
+
+    if (saw_e0) {                  /* arrow keys; other E0 keys ignored */
+        saw_e0 = false;
+        if (sc == 0x48)
+            push((char)KEY_UP);
+        else if (sc == 0x50)
+            push((char)KEY_DOWN);
+        return;
+    }
 
     if (sc & 0x80) {               /* key release */
         sc &= 0x7f;
