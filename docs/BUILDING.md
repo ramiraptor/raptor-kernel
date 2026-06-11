@@ -42,7 +42,14 @@ window), recent WSL versions display it automatically via WSLg.
 | `make` | build `build/raptor.elf` |
 | `make run` | boot the kernel in a QEMU window (serial mirrored to the terminal) |
 | `make run-tty` | boot headless; the serial console *is* your terminal |
+| `make test` | boot in QEMU and run the scripted smoke test (`tests/smoke.sh`) |
 | `make clean` | delete the `build/` directory |
+
+The smoke test boots the kernel headless, drives a series of shell
+commands over the serial console, and fails unless every expected
+response appears in the transcript — so a passing run means "boots and
+works", not just "compiles". It is designed to be run by CI on every
+push.
 
 The build is incremental (object files and dependency files land in
 `build/`, mirroring the source layout) and takes well under ten seconds

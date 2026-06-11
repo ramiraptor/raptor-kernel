@@ -37,7 +37,7 @@ DEPS := $(OBJS:.o=.d)
 QEMU_FLAGS := -m 128M -kernel $(KERNEL) \
               -device isa-debug-exit,iobase=0xf4,iosize=0x04
 
-.PHONY: all run run-tty clean
+.PHONY: all run run-tty test clean
 
 all: $(KERNEL)
 
@@ -58,6 +58,9 @@ run: $(KERNEL)
 
 run-tty: $(KERNEL)
 	$(QEMU) $(QEMU_FLAGS) -display none -serial stdio
+
+test: $(KERNEL)
+	sh tests/smoke.sh $(KERNEL)
 
 clean:
 	rm -rf $(BUILD)
