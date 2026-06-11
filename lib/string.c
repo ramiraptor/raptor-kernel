@@ -114,3 +114,16 @@ char *strchr(const char *s, int c)
             return NULL;
     }
 }
+
+char *strstr(const char *haystack, const char *needle)
+{
+    size_t n = strlen(needle);
+
+    if (!n)
+        return (char *)haystack;
+    for (; *haystack; haystack++) {
+        if (*haystack == *needle && strncmp(haystack, needle, n) == 0)
+            return (char *)haystack;
+    }
+    return NULL;
+}

@@ -80,7 +80,21 @@ size_t console_capture_end(void)
     return capture_len;
 }
 
-char console_getchar(void)
+/*
+ * The bytes of an ANSI escape sequence (ESC [ A for arrow-up, etc.)
+ * arrive back to back; poll briefly for the next one.
+ */
+static int serial_read_soon(void)
+{
+    for (int spin = 0; spin < 100000; spin++) {
+        int c = serial_read();
+        if (c >= 0)
+            return c;
+    }
+    return -1;
+}
+
+int console_getchar(void)
 {
     for (;;) {
         int c = keyboard_read();
@@ -88,14 +102,25 @@ char console_getchar(void)
         if (c < 0) {
             c = serial_read();
             if (c >= 0) {
-                if (c == '\r')          /* serial terminals send CR    */
+                if (c == '\r') {        /* serial terminals send CR    */
                     c = '\n';
-                else if (c == 0x7f)     /* DEL: treat as backspace     */
+                } else if (c == 0x7f) { /* DEL: treat as backspace     */
                     c = '\b';
+                } else if (c == 0x1b) { /* ESC: maybe an arrow key     */
+                    if (serial_read_soon() == '[') {
+                        switch (serial_read_soon()) {
+                        case 'A': c = KEY_UP;   break;
+                        case 'B': c = KEY_DOWN; break;
+                        default:  c = -1;       break;
+                        }
+                    } else {
+                        c = -1;         /* lone ESC or unknown: drop   */
+                    }
+                }
             }
         }
         if (c >= 0)
-            return (char)c;
+            return c;
 
         /* Nothing pending: halt until the next interrupt. */
         __asm__ volatile("sti; hlt");

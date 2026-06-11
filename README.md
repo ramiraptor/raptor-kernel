@@ -53,9 +53,10 @@ hello
 - **ramfs** — a hierarchical in-memory filesystem with absolute/relative
   path resolution (`.` and `..` included), preloaded with `/etc/motd`,
   `/etc/os-release` and friends.
-- **rsh** — a shell with 25 built-in commands (`ls`, `cat`, `cd`, `mkdir`,
-  `rm`, `cp`, `mv`, `free`, `uname`, `date`, `hexdump`, ...), output
-  redirection with `>` and `>>`, quoting, and command history.
+- **rsh** — a shell with 30 built-in commands (`ls`, `cat`, `cd`, `mkdir`,
+  `rm`, `cp`, `mv`, `grep`, `wc`, `head`, `free`, `uname`, `date`,
+  `hexdump`, `lscpu`, `lspci`, ...), output redirection with `>` and
+  `>>`, quoting, and arrow-key command history.
 
 The whole thing is around 3,000 lines of code and builds in seconds.
 
