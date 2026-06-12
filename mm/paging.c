@@ -1,18 +1,21 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * paging.c - turn on the MMU.
+ * paging.c - the final virtual memory layout.
  *
- * Raptor identity-maps all detected RAM with 4 MiB "large" pages (the
- * Page Size Extension, present on every CPU since the Pentium) and
- * enables paging. Virtual addresses still equal physical addresses,
- * so nothing else in the kernel changes - but from here on:
+ * boot.S already switched the MMU on with a temporary directory that
+ * maps both the first 4 MiB at its physical address (so the enabling
+ * code could keep executing) and the higher half. This file builds
+ * the *real* page directory from the detected memory size and loads
+ * it, which establishes the layout the kernel runs with:
  *
- *   - touching an address beyond RAM faults immediately instead of
- *     silently reading garbage from the bus;
- *   - NULL-page accesses can be trapped once the first 4 MiB is
- *     eventually broken into 4 KiB pages;
- *   - the path to a higher-half kernel and per-process address
- *     spaces is just "build finer page tables and switch CR3".
+ *   virtual                          physical
+ *   0x00000000 - 0xBFFFFFFF   ->     unmapped: NULL and wild pointers
+ *                                    page-fault immediately
+ *   0xC0000000 - +RAM size    ->     0 .. RAM, 4 MiB PSE pages
+ *
+ * This is the same split Linux uses (PAGE_OFFSET = 0xC0000000): the
+ * kernel owns the top gigabyte of every future address space, leaving
+ * 0-3 GiB free for userspace once processes exist.
  *
  * Using 4 MiB pages keeps the whole mapping in a single page
  * directory: no page tables to allocate, one TLB entry per 4 MiB.
@@ -25,8 +28,7 @@
 #define PDE_WRITE    (1u << 1)
 #define PDE_LARGE    (1u << 7)     /* 4 MiB page (requires CR4.PSE) */
 
-#define CR4_PSE      (1u << 4)
-#define CR0_PG       (1u << 31)
+#define KERNEL_PDE   (KERNEL_VBASE >> 22)        /* entry 768 */
 
 static uint32_t page_directory[1024] __attribute__((aligned(4096)));
 
@@ -47,22 +49,19 @@ void paging_init(void)
     uint32_t mib = (pmm_total_kib() + 1023) / 1024;
     uint32_t entries = (mib + 3) / 4;
 
-    if (entries > 1024)
-        entries = 1024;
+    if (entries > 1024 - KERNEL_PDE)
+        entries = 1024 - KERNEL_PDE;             /* 1 GiB window */
 
     for (uint32_t i = 0; i < entries; i++)
-        page_directory[i] = (i << 22) | PDE_PRESENT | PDE_WRITE | PDE_LARGE;
-    /* Remaining entries stay zero: not present, faults on access. */
+        page_directory[KERNEL_PDE + i] =
+                (i << 22) | PDE_PRESENT | PDE_WRITE | PDE_LARGE;
 
-    uint32_t cr;
-
-    __asm__ volatile("mov %%cr4, %0" : "=r"(cr));
-    cr |= CR4_PSE;
-    __asm__ volatile("mov %0, %%cr4" : : "r"(cr));
-
-    __asm__ volatile("mov %0, %%cr3" : : "r"((uint32_t)page_directory));
-
-    __asm__ volatile("mov %%cr0, %0" : "=r"(cr));
-    cr |= CR0_PG;
-    __asm__ volatile("mov %0, %%cr0" : : "r"(cr) : "memory");
+    /*
+     * Entries 0-767 stay zero: the identity window boot.S needed is
+     * gone, the NULL page is unmapped, and the lower 3 GiB is held
+     * in reserve for userspace. CR4.PSE and CR0.PG are already set;
+     * loading CR3 with the new directory also flushes the TLB.
+     */
+    __asm__ volatile("mov %0, %%cr3" : : "r"(V2P(page_directory))
+                     : "memory");
 }

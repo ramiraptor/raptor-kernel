@@ -1,20 +1,29 @@
 /*
  * Raptor kernel linker script.
  *
- * The kernel is linked as a 32-bit ELF executable loaded at the 1 MiB
- * physical mark, the traditional home of x86 kernels (everything below
- * 1 MiB is a minefield of BIOS data areas and legacy MMIO).
+ * The kernel is a higher-half kernel: it is loaded at physical 1 MiB
+ * (the traditional home of x86 kernels) but linked to run at
+ * 3 GiB + 1 MiB (0xC0100000), the same split Linux uses. Two address
+ * spaces appear below:
  *
- * The .multiboot section must come first: the Multiboot specification
- * requires the header to live within the first 8192 bytes of the image.
+ *   - .boot keeps VMA == LMA == physical. It holds the Multiboot
+ *     header (which must live in the first 8192 bytes of the image)
+ *     and the early assembly that turns paging on - the only code
+ *     that runs at physical addresses.
+ *   - everything else is linked at KERNEL_VBASE + physical (the AT()
+ *     directives keep the load addresses physical) and runs only
+ *     after boot.S has mapped the higher half.
  *
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
 ENTRY(_start)
 
+KERNEL_VBASE = 0xC0000000;
+
 SECTIONS
 {
+    /* ---- physical world: Multiboot header and early boot code ---- */
     . = 1M;
 
     .multiboot : ALIGN(4K)
@@ -22,28 +31,39 @@ SECTIONS
         KEEP(*(.multiboot))
     }
 
-    .text : ALIGN(4K)
+    .boot : ALIGN(4K)
+    {
+        *(.boot)
+    }
+
+    /* ---- virtual world: the kernel proper, in the higher half ---- */
+    . = ALIGN(4K) + KERNEL_VBASE;
+
+    .text : AT(ADDR(.text) - KERNEL_VBASE)
     {
         *(.text*)
     }
 
-    .rodata : ALIGN(4K)
+    . = ALIGN(4K);
+    .rodata : AT(ADDR(.rodata) - KERNEL_VBASE)
     {
         *(.rodata*)
     }
 
-    .data : ALIGN(4K)
+    . = ALIGN(4K);
+    .data : AT(ADDR(.data) - KERNEL_VBASE)
     {
         *(.data*)
     }
 
-    .bss : ALIGN(4K)
+    . = ALIGN(4K);
+    .bss : AT(ADDR(.bss) - KERNEL_VBASE)
     {
         *(COMMON)
         *(.bss*)
     }
 
-    /* First free byte after the kernel image; the heap starts here. */
+    /* First free virtual byte after the kernel; the heap starts here. */
     . = ALIGN(4K);
     kernel_end = .;
 

@@ -6,11 +6,14 @@ appears, and how the subsystems relate to each other.
 
 ## Big picture
 
-Raptor is a **monolithic kernel** for 32-bit x86 (i386), using the flat
-memory model: all segments span the full 4 GiB address space, and paging
-identity-maps detected RAM so virtual and physical addresses coincide.
-Everything — drivers, filesystem, shell — runs in ring 0 in a single
-address space with interrupts as the only source of concurrency.
+Raptor is a **monolithic higher-half kernel** for 32-bit x86 (i386):
+segments are flat (every segment spans the full 4 GiB), the kernel is
+linked at `0xC0100000`, and paging maps all detected RAM at
+`0xC0000000` upward — the same `PAGE_OFFSET` split Linux uses. The
+lower 3 GiB of virtual space is unmapped, reserved for the userspace
+of the future. Everything — drivers, filesystem, shell — runs in
+ring 0 in a single address space with interrupts as the only source
+of concurrency.
 
 That is exactly where Linux 0.01 started, and for the same reason: it is
 the simplest design that produces a *usable* system, and every later
@@ -21,8 +24,10 @@ throwing the working system away.
 
 ```
 bootloader (GRUB / QEMU -kernel)
-  └─ boot/boot.S      _start: set up the stack, push magic + multiboot info
-       └─ kernel/main.c   kmain():
+  └─ boot/boot.S      _start (physical): build the boot page directory
+       │              (identity 0-4 MiB + higher half), enable CR4.PSE
+       │              and CR0.PG, jump over the 3 GiB line
+       └─ kernel/main.c   kmain() (virtual, 0xC01xxxxx):
             console_init()      VGA + serial up; we can print
             gdt_init()          our own flat-model GDT, bootloader's discarded
             idt_init()          256 IDT gates, PIC remapped to vectors 32-47, sti
@@ -30,7 +35,8 @@ bootloader (GRUB / QEMU -kernel)
             keyboard_init()     PS/2 handler on IRQ1
             kheap_init()        4 MiB heap right after the kernel image
             pmm_init()          frame bitmap built from the Multiboot memory info
-            paging_init()       all RAM identity-mapped with 4 MiB pages, CR0.PG set
+            paging_init()       final page directory: higher half only,
+                                identity window dropped, NULL unmapped
             ramfs_init()        root filesystem populated on the heap
             shell_run()         REPL; never returns
 ```
@@ -50,12 +56,28 @@ heap's frames) and before ramfs (whose nodes are heap allocations).
 
 ## Memory map
 
+Physical layout (what is where in RAM):
+
 ```
 0x00000000 ─ 0x000FFFFF   legacy area: BIOS data, VGA memory at 0xB8000
-0x00100000 ─ kernel_end   the kernel image (.multiboot .text .rodata .data .bss)
+0x00100000 ─ ...          multiboot header + boot code, then the kernel
+                          image (.text .rodata .data .bss)
 kernel_end ─ +4 MiB       kernel heap (first-fit free list)
 above that                free physical frames, tracked by the PMM bitmap
 ```
+
+Virtual layout (what the MMU shows after `paging_init()`):
+
+```
+0x00000000 ─ 0xBFFFFFFF   unmapped - NULL and wild pointers fault;
+                          reserved for the future userspace
+0xC0000000 ─ +RAM size    all physical RAM, 4 MiB pages
+                          (kernel at 0xC0100000, VGA at P2V(0xB8000))
+```
+
+`V2P()`/`P2V()` in `include/raptor/mm.h` translate between the two
+views; the physical memory manager works in physical addresses, the
+heap and every pointer the kernel dereferences are virtual.
 
 `kernel_end` is exported by the linker script, page-aligned. The physical
 memory manager marks everything below the end of the heap as used at boot
@@ -65,19 +87,28 @@ allocate page tables from.
 
 ## Paging
 
-`mm/paging.c` builds a single page directory of 4 MiB "large" pages
-(PSE — Page Size Extension) that identity-maps every byte of detected
-RAM, then sets `CR4.PSE`, loads `CR3` and flips `CR0.PG`. Virtual
-addresses still equal physical addresses, so no other code changed when
-the MMU came on — but accesses beyond RAM now fault deterministically
-instead of floating on the bus, and the page-fault handler reports the
-faulting address from `CR2` along with the decoded error code
-(read/write, kernel/user, not-present/protection) before panicking.
+Paging comes up in two stages:
+
+1. **boot.S** (running at physical addresses, before any C) builds a
+   temporary page directory of 4 MiB PSE pages with two views: entry 0
+   identity-maps the first 4 MiB so the instruction stream survives
+   the moment `CR0.PG` is set, and entries 768-1023 map the
+   `0xC0000000` window onto physical 0-1 GiB. It then jumps to the
+   linked (virtual) address of the kernel proper.
+2. **`mm/paging.c`** builds the final directory from the *detected*
+   memory size: higher-half entries only, sized to real RAM, identity
+   window gone. Loading it into CR3 unmaps NULL and the entire lower
+   3 GiB in one move.
+
+A page fault reports the faulting address from `CR2` along with the
+decoded error code (read/write, kernel/user, not-present/protection)
+before the register-dump panic — so a NULL dereference dies with
+`read access to 00000000 ... page not present` instead of silently
+reading the interrupt vector table.
 
 The 4 MiB granularity keeps the entire mapping in one 4 KiB page
-directory with no page tables to manage. Breaking the first entry into
-4 KiB pages (to unmap the NULL page) and moving the kernel to the higher
-half are the next steps on the roadmap.
+directory with no page tables to manage. Per-process directories for
+userspace are the next step on the roadmap.
 
 ## Interrupts
 
