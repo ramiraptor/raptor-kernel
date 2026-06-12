@@ -1,5 +1,7 @@
 # Raptor
 
+[![CI](https://github.com/ramiraptor/raptor-kernel/actions/workflows/ci.yml/badge.svg)](https://github.com/ramiraptor/raptor-kernel/actions/workflows/ci.yml)
+
 A small, fast, monolithic Unix-like kernel for 32-bit x86, written in C and
 assembly in the spirit of how Linus Torvalds started Linux in 1991: no grand
 framework, no premature abstraction — just a kernel that boots on real(ish)

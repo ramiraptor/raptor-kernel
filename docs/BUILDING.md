@@ -48,8 +48,8 @@ window), recent WSL versions display it automatically via WSLg.
 The smoke test boots the kernel headless, drives a series of shell
 commands over the serial console, and fails unless every expected
 response appears in the transcript — so a passing run means "boots and
-works", not just "compiles". It is designed to be run by CI on every
-push.
+works", not just "compiles". CI (`.github/workflows/ci.yml`) runs it on
+every push and pull request.
 
 The build is incremental (object files and dependency files land in
 `build/`, mirroring the source layout) and takes well under ten seconds
