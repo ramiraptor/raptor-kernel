@@ -10,9 +10,11 @@
 
 #include <stdint.h>
 #include <raptor/io.h>
+#include <raptor/mm.h>
 #include <raptor/string.h>
 
-#define VGA_MEM    ((volatile uint16_t *)0xB8000)
+/* Physical 0xB8000, reached through the higher-half kernel window. */
+#define VGA_MEM    ((volatile uint16_t *)P2V(0xB8000))
 #define VGA_COLS   80
 #define VGA_ROWS   25
 #define CRTC_INDEX 0x3D4

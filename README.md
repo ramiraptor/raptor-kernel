@@ -21,7 +21,7 @@ heap and an in-memory filesystem, and drops you into **rsh** — an
 interactive shell with over twenty familiar Linux-style commands.
 
 ```
-Raptor 0.1.0 (Velociraptor) booting...
+Raptor 0.2.1 (Velociraptor) booting...
 
 [ OK ] Global descriptor table installed
 [ OK ] Interrupts enabled (IDT + PIC remapped to 32-47)
@@ -29,12 +29,14 @@ Raptor 0.1.0 (Velociraptor) booting...
 [ OK ] PS/2 keyboard ready
 [ OK ] Kernel heap initialized (4 MiB)
 [ OK ] Physical memory: 127 MiB detected
+[ OK ] Paging enabled (128 MiB at c0000000, NULL page unmapped)
 [ OK ] ramfs mounted at /
 
-Welcome to Raptor 0.1.0 (Velociraptor)!
+Welcome to Raptor 0.2.1 (Velociraptor)!
 Type 'help' to see the available commands.
 
-root@raptor:/# echo hello > /tmp/note && cat /tmp/note
+root@raptor:/# echo hello > /tmp/note
+root@raptor:/# cat /tmp/note
 hello
 ```
 
@@ -49,6 +51,10 @@ hello
 - **Dual console** — every byte of output is mirrored to the screen and
   COM1, and input is merged from the keyboard and COM1, so the same image
   runs in a window or fully headless (`make run-tty`).
+- **Virtual memory** — a higher-half kernel at `0xC0000000` (the same
+  split Linux uses), all RAM mapped with 4 MiB PSE pages, the NULL page
+  and the entire lower 3 GiB unmapped, and page faults reported with the
+  CR2 address and decoded error code.
 - **Memory management** — a bitmap physical frame allocator plus a
   first-fit kernel heap with block splitting, coalescing, and corruption
   detection.

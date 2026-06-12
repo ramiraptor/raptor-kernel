@@ -4,16 +4,17 @@ Raptor grows the way Linux did: each release keeps the system bootable
 and usable while adding one structural capability. The list below is
 ordered — every item builds on the ones before it.
 
-## 0.2 — Virtual memory
+## 0.2 — Virtual memory ✅ (complete)
 
-- [x] Enable paging with identity-mapped kernel space (4 MiB PSE pages,
-  `mm/paging.c`).
+- [x] Enable paging with 4 MiB PSE pages (`mm/paging.c`).
 - [x] Page-fault handler that reports the faulting address (CR2) and
   decoded error code.
-- [ ] Higher-half kernel at `0xC0000000`, freeing low virtual addresses
-  for the future userspace.
-- [ ] Unmap the NULL page by splitting the first directory entry into
-  4 KiB pages.
+- [x] Higher-half kernel at `0xC0000000`: linked at `0xC0100000`,
+  boot.S switches the MMU on before kmain, and the lower 3 GiB is
+  reserved for the future userspace.
+- [x] NULL page unmapped — the final page directory maps *only* the
+  higher half, so NULL and all wild low-address pointers fault
+  immediately (stronger than the originally planned 4 KiB split).
 
 ## 0.3 — Tasks and scheduling
 

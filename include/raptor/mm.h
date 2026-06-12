@@ -11,6 +11,15 @@
 
 #define PAGE_SIZE 4096u
 
+/*
+ * The kernel lives in the higher half: linked at KERNEL_VBASE + its
+ * physical address, with all RAM mapped at KERNEL_VBASE upward and
+ * everything below it unmapped (so NULL dereferences fault).
+ */
+#define KERNEL_VBASE 0xC0000000u
+#define V2P(a) ((uint32_t)(a) - KERNEL_VBASE)
+#define P2V(a) ((uint32_t)(a) + KERNEL_VBASE)
+
 /* ---- physical memory manager (bitmap frame allocator) ---- */
 
 void      pmm_init(const multiboot_info_t *mbi);

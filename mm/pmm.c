@@ -44,8 +44,10 @@ void pmm_init(const multiboot_info_t *mbi)
     if (total_frames > MAX_FRAMES)
         total_frames = MAX_FRAMES;
 
-    /* Reserve everything up to the end of the kernel heap. */
-    uint32_t reserved_end = kheap_end_addr();
+    /* Reserve everything up to the end of the kernel heap. The heap
+     * address is virtual (higher half); the bitmap tracks physical
+     * frames, so translate before marking. */
+    uint32_t reserved_end = V2P(kheap_end_addr());
     for (uint32_t addr = 0; addr < reserved_end; addr += PAGE_SIZE)
         mark_used(addr / PAGE_SIZE);
 }
