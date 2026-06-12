@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# Build the kernel and boot it in QEMU on every push and pull request.
+# The smoke test drives the shell over the serial console and fails the
+# job if any expected output is missing - so a green check mark means
+# "this commit boots and the shell works", not just "it compiles".
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-boot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the tree
+        uses: actions/checkout@v4
+
+      - name: Install toolchain and QEMU
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq gcc gcc-multilib make binutils qemu-system-x86
+
+      - name: Build
+        run: make
+
+      - name: Boot smoke test
+        run: make test
